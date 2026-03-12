@@ -30,14 +30,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         auth = Firebase.auth
-        homeViewmodel = HomeViewmodel()
+
+        // Inicializamos Room y le pasamos el DAO al ViewModel
+        val database = com.example.firebase.data.local.AppDatabase.getDatabase(this)
+        homeViewmodel = HomeViewmodel(database.songDao())
 
         setContent {
             navHostController = rememberNavController()
             FirebaseTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     NavigationWrapper(navHostController, auth, homeViewmodel)
-
                 }
             }
         }
