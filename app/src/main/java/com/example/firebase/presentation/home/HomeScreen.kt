@@ -1,5 +1,10 @@
 package com.example.firebase.presentation.home
 
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,6 +40,7 @@ import coil.compose.AsyncImage
 import com.example.firebase.data.model.Artist
 import com.example.firebase.data.model.Player
 import com.example.firebase.ui.theme.Black
+import kotlin.math.sqrt
 
 @Composable
 fun HomeScreen(
@@ -47,7 +54,8 @@ fun HomeScreen(
     val player: Player? by viewmodel.player.collectAsState()
 
     // --- ACTIVAMOS EL SENSOR DE AGITAR ---
-    viewmodel.ShakeDetector(
+    // ¡Ojo! Llamamos a ShakeDetector directamente, sin el viewmodel.
+    ShakeDetector(
         onShake = {
             Toast.makeText(context, "¡Agitado! Buscando recomendaciones...", Toast.LENGTH_SHORT).show()
             viewmodel.recommendRandomSong()
@@ -166,6 +174,55 @@ fun PlayerComponent(player: Player, onPlayPause: () -> Unit, onCancel: () -> Uni
             Button(onClick = onCancel) {
                 Text("X")
             }
+        }
+    }
+}
+
+// --- ESTA ES LA FUNCIÓN DEL SENSOR DE AGITACIÓN QUE DEBE ESTAR AL FINAL DEL ARCHIVO ---
+@Composable
+fun ShakeDetector(onShake: () -> Unit) {
+    val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        val sensorEventListener = object : SensorEventListener {
+            private var lastShakeTime: Long = 0
+
+            override fun onSensorChanged(event: SensorEvent) {
+                if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+                    val x = event.values[0]
+                    val y = event.values[1]
+                    val z = event.values[2]
+
+                    val gX = x / SensorManager.GRAVITY_EARTH
+                    val gY = y / SensorManager.GRAVITY_EARTH
+                    val gZ = z / SensorManager.GRAVITY_EARTH
+
+                    val gForce = sqrt((gX * gX + gY * gY + gZ * gZ).toDouble()).toFloat()
+
+                    if (gForce > 2.7f) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastShakeTime > 2000) {
+                            lastShakeTime = now
+                            onShake()
+                        }
+                    }
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        sensorManager.registerListener(
+            sensorEventListener,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+
+        onDispose {
+            sensorManager.unregisterListener(sensorEventListener)
         }
     }
 }

@@ -33,7 +33,12 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
 
     // Archivo temporal para la cámara
     val tempFile = File(context.cacheDir, "profile_image_${System.currentTimeMillis()}.jpg")
-    val tempUri = FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile)
+    // Cambia la línea de tempUri por esta:
+    val tempUri = FileProvider.getUriForFile(
+        context,
+        "com.example.firebase.provider",
+        tempFile
+    )
 
     // Launcher para abrir la Galería
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->

@@ -1,11 +1,13 @@
 package com.example.firebase.presentation.home
 
-import androidx.compose.runtime.Composable
+import android.media.MediaPlayer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebase.data.api.RetrofitInstance
 import com.example.firebase.data.local.SongDao
 import com.example.firebase.data.local.SongEntity
+import com.example.firebase.data.model.Artist
+import com.example.firebase.data.model.Player
 import com.example.firebase.domain.model.Song
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -13,16 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalContext
-import com.example.firebase.data.model.Artist
-import com.example.firebase.data.model.Player
-import kotlin.math.sqrt
 
 class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
 
@@ -36,20 +28,61 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
     )
     val artist: StateFlow<List<Artist>> = _artist
 
-    // --- ESTADO DEL REPRODUCTOR ---
+    // --- ESTADO DEL REPRODUCTOR (UI) ---
     private val _player = MutableStateFlow<Player?>(null)
     val player: StateFlow<Player?> = _player
 
+    // --- MEDIA PLAYER (Nativo para audio) ---
+    private var mediaPlayer: MediaPlayer? = null
+
     fun addPlayer(artist: Artist) {
         _player.value = Player(artist, true)
+        // Opcional: Si tus artistas tuvieran una URL de audio, llamarías a playSong(url) aquí
     }
 
     fun onPlaySelected() {
-        _player.value = _player.value?.copy(play = !(_player.value?.play ?: false))
+        val isPlaying = _player.value?.play ?: false
+        // Cambiamos el estado visual de la UI (Play/Pause)
+        _player.value = _player.value?.copy(play = !isPlaying)
+
+        // Pausamos o reanudamos la música real
+        if (isPlaying) {
+            mediaPlayer?.pause()
+        } else {
+            mediaPlayer?.start()
+        }
     }
 
     fun onCancelSelected() {
         _player.value = null
+        stopSong()
+    }
+
+    // Función para reproducir el audio real desde una URL de la API
+    fun playSong(previewUrl: String?) {
+        if (previewUrl == null) return
+
+        mediaPlayer?.release()
+
+        mediaPlayer = MediaPlayer().apply {
+            setDataSource(previewUrl)
+            prepareAsync()
+            setOnPreparedListener {
+                start()
+            }
+        }
+    }
+
+    fun stopSong() {
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
+
+    // Limpiamos la memoria si se destruye el ViewModel
+    override fun onCleared() {
+        super.onCleared()
+        mediaPlayer?.release()
     }
 
     // --- ESTADO DE LA API (Búsqueda) ---
@@ -104,6 +137,7 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         }
     }
 
+    // --- SENSORES: Recomendación ---
     private val recommendationKeywords = listOf(
         "Rock", "Pop", "Jazz", "The Beatles", "Dua Lipa", "Mozart", "Coldplay", "Rosalía"
     )
@@ -111,53 +145,5 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
     fun recommendRandomSong() {
         val randomKeyword = recommendationKeywords.random()
         searchMusic(randomKeyword)
-    }
-
-    @Composable
-    fun ShakeDetector(onShake: () -> Unit) {
-        val context = LocalContext.current
-
-        DisposableEffect(Unit) {
-            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-            val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-            val sensorEventListener = object : SensorEventListener {
-                private var lastShakeTime: Long = 0
-
-                override fun onSensorChanged(event: SensorEvent) {
-                    if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                        val x = event.values[0]
-                        val y = event.values[1]
-                        val z = event.values[2]
-
-                        val gX = x / SensorManager.GRAVITY_EARTH
-                        val gY = y / SensorManager.GRAVITY_EARTH
-                        val gZ = z / SensorManager.GRAVITY_EARTH
-
-                        val gForce = sqrt((gX * gX + gY * gY + gZ * gZ).toDouble()).toFloat()
-
-                        if (gForce > 2.7f) {
-                            val now = System.currentTimeMillis()
-                            if (now - lastShakeTime > 2000) {
-                                lastShakeTime = now
-                                onShake()
-                            }
-                        }
-                    }
-                }
-
-                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-            }
-
-            sensorManager.registerListener(
-                sensorEventListener,
-                accelerometer,
-                SensorManager.SENSOR_DELAY_NORMAL
-            )
-
-            onDispose {
-                sensorManager.unregisterListener(sensorEventListener)
-            }
-        }
     }
 }
