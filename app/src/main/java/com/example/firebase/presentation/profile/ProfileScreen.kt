@@ -28,26 +28,25 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
     val context = LocalContext.current
     val user = auth.currentUser
 
-    // Estado para guardar la URI de la imagen seleccionada o tomada
+
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Archivo temporal para la cámara
+
     val tempFile = File(context.cacheDir, "profile_image_${System.currentTimeMillis()}.jpg")
-    // Cambia la línea de tempUri por esta:
+
     val tempUri = FileProvider.getUriForFile(
         context,
         "com.example.firebase.provider",
         tempFile
     )
 
-    // Launcher para abrir la Galería
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             imageUri = uri
         }
     }
 
-    // Launcher para abrir la Cámara
+
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
             imageUri = tempUri
@@ -61,7 +60,7 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
         Text(text = "Mi Perfil", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Contenedor de la Foto de Perfil
+
         Box(
             modifier = Modifier
                 .size(150.dp)
@@ -70,7 +69,7 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             if (imageUri != null) {
-                // Si hay imagen, la cargamos con Coil
+
                 AsyncImage(
                     model = imageUri,
                     contentDescription = "Foto de perfil",
@@ -78,7 +77,7 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                // Icono por defecto
+
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = "Sin foto",
@@ -92,7 +91,6 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
         Text(text = user?.email ?: "Usuario desconocido", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botones de Cámara y Galería
         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
             Button(onClick = { cameraLauncher.launch(tempUri) }) {
                 Text("Cámara")
@@ -104,7 +102,6 @@ fun ProfileScreen(auth: FirebaseAuth, onSignOut: () -> Unit) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Botón para cerrar sesión (Requisito del menú/perfil)
         OutlinedButton(
             onClick = {
                 auth.signOut()

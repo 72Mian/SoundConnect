@@ -25,7 +25,6 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val currentUserId = viewModel.currentUserId
     val listState = rememberLazyListState()
 
-    // Scroll automático al último mensaje cuando llega uno nuevo
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -33,13 +32,12 @@ fun ChatScreen(viewModel: ChatViewModel) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Lista de mensajes (LazyColumn)
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.Bottom // Los mensajes se apilan desde abajo
+            verticalArrangement = Arrangement.Bottom
         ) {
             items(messages) { msg ->
                 val isMine = msg.senderId == currentUserId
@@ -51,7 +49,6 @@ fun ChatScreen(viewModel: ChatViewModel) {
             }
         }
 
-        // Barra inferior para enviar mensajes
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -82,7 +79,6 @@ fun ChatScreen(viewModel: ChatViewModel) {
 
 @Composable
 fun MessageBubble(message: ChatMessage, isMine: Boolean, onDeleteClick: () -> Unit) {
-    // Definimos colores y alineaciones según si el mensaje es nuestro o no
     val backgroundColor = if (isMine) Color(0xFFDCF8C6) else Color.White
     val alignment = if (isMine) Arrangement.End else Arrangement.Start
     val shape = if (isMine) {
@@ -101,10 +97,9 @@ fun MessageBubble(message: ChatMessage, isMine: Boolean, onDeleteClick: () -> Un
             shape = shape,
             colors = CardDefaults.cardColors(containerColor = backgroundColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier.widthIn(max = 250.dp) // Ancho máximo de la burbuja
+            modifier = Modifier.widthIn(max = 250.dp)
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
-                // Mostramos el email del remitente (solo si no es nuestro)
                 if (!isMine) {
                     Text(
                         text = message.senderEmail,
@@ -121,7 +116,6 @@ fun MessageBubble(message: ChatMessage, isMine: Boolean, onDeleteClick: () -> Un
             }
         }
 
-        // Botón de eliminar (solo visible para mensajes propios)
         if (isMine) {
             Icon(
                 imageVector = Icons.Default.Delete,

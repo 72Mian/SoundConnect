@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,9 +42,12 @@ fun HomeScreen(
     onNavigateToMap: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val songs by viewmodel.songs.collectAsState() // Obtenemos las canciones reales de la API
+    val songs by viewmodel.songs.collectAsState()
+    val favoriteSongs by viewmodel.favoriteSongs.collectAsState()
     val player by viewmodel.player.collectAsState()
-    var searchQuery by remember { mutableStateOf("") } // Estado para la barra de búsqueda
+
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     ShakeDetector(
         onShake = {
@@ -56,7 +61,6 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Black)
     ) {
-        // --- BOTONES DE NAVEGACIÓN ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,36 +72,65 @@ fun HomeScreen(
             Button(onClick = onNavigateToProfile) { Text("Perfil") }
         }
 
-        // --- BARRA DE BÚSQUEDA ---
-        Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.weight(1f),
-                label = { Text("Buscar canción...", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                )
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { viewmodel.searchMusic(searchQuery) }) {
-                Text("Buscar")
+        TabRow(
+            selectedTabIndex = selectedTabIndex,
+            containerColor = Black,
+            contentColor = Color.White
+        ) {
+            Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }) {
+                Text("Búsqueda", modifier = Modifier.padding(16.dp))
+            }
+            Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }) {
+                Text("Mis Favoritos", modifier = Modifier.padding(16.dp))
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- LISTA DE CANCIONES (API) ---
-        LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
-            items(songs) { song ->
-                SongItem(song = song) {
-                    viewmodel.selectSongToPlay(song) // ¡Pulsar reproduce la canción!
+        if (selectedTabIndex == 0) {
+            Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.weight(1f),
+                    label = { Text("Buscar canción...", color = Color.Gray) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = { viewmodel.searchMusic(searchQuery) }) {
+                    Text("Buscar")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+                items(songs) { song ->
+                    val isFav = favoriteSongs.any { it.id == song.id }
+                    SongItem(
+                        song = song,
+                        isFavorite = isFav,
+                        onFavoriteClick = { viewmodel.toggleFavorite(song, isFav) },
+                        onClick = { viewmodel.selectSongToPlay(song) }
+                    )
+                }
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+                items(favoriteSongs) { song ->
+                    SongItem(
+                        song = song,
+                        isFavorite = true,
+                        onFavoriteClick = { viewmodel.toggleFavorite(song, true) },
+                        onClick = { viewmodel.selectSongToPlay(song) }
+                    )
                 }
             }
         }
 
-        // --- REPRODUCTOR ---
         player?.let {
             PlayerComponent(it, { viewmodel.onPlaySelected() }, { viewmodel.onCancelSelected() })
         }
@@ -105,7 +138,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun SongItem(song: Song, onClick: () -> Unit) {
+fun SongItem(song: Song, isFavorite: Boolean, onFavoriteClick: () -> Unit, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -122,7 +155,7 @@ fun SongItem(song: Song, onClick: () -> Unit) {
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
                 color = Color.White,
@@ -133,6 +166,13 @@ fun SongItem(song: Song, onClick: () -> Unit) {
                 text = song.artist,
                 color = Color.LightGray,
                 fontSize = 14.sp
+            )
+        }
+        IconButton(onClick = onFavoriteClick) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = "Favorito",
+                tint = if (isFavorite) Color.Red else Color.Gray
             )
         }
     }
@@ -175,7 +215,7 @@ fun PlayerComponent(player: Player, onPlayPause: () -> Unit, onCancel: () -> Uni
         Row {
             IconButton(onClick = onPlayPause) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow, // Usamos icono de Play de Compose
+                    imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play/Pause",
                     tint = if (player.play) Color.Green else Color.White
                 )

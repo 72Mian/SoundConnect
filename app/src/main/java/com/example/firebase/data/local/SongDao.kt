@@ -16,7 +16,6 @@ interface SongDao {
     @Delete
     suspend fun deleteFavorite(song: SongEntity)
 
-    // Flow nos permite observar los cambios en la base de datos en tiempo real
     @Query("SELECT * FROM favorite_songs")
     fun getAllFavorites(): Flow<List<SongEntity>>
 }

@@ -47,19 +47,19 @@ fun NavigationWrapper(
             )
         }
         composable("chat") {
-            // Instanciamos el ChatViewModel pasándole la autenticación
+
             val chatViewModel = ChatViewModel(auth)
             ChatScreen(chatViewModel)
         }
         composable("profile") {
             com.example.firebase.presentation.profile.ProfileScreen(auth, onSignOut = {
                 navHostController.navigate("LogIn") {
-                    popUpTo(0) // Limpiamos toda la pila de navegación
+                    popUpTo(0)
                 }
             })
         }
         composable("map") {
-            // Instanciamos el MapViewModel
+
             val mapViewModel = androidx.lifecycle.viewmodel.compose.viewModel<com.example.firebase.presentation.map.MapViewModel>()
             com.example.firebase.presentation.map.MapScreen(mapViewModel)
         }

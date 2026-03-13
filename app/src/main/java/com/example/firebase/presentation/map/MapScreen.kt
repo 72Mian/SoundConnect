@@ -23,24 +23,22 @@ fun MapScreen(viewModel: MapViewModel) {
     val context = LocalContext.current
     val musicTags by viewModel.musicTags.collectAsState()
 
-    // Cliente para obtener la ubicación actual
+
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    // Estado de la cámara del mapa (Por defecto en Madrid, por ejemplo)
+
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(40.4168, -3.7038), 10f)
     }
 
-    // Variables de estado para los permisos y la ubicación actual
+
     var hasLocationPermission by remember { mutableStateOf(false) }
     var currentLatLng by remember { mutableStateOf<LatLng?>(null) }
 
-    // Estado para el diálogo de añadir Music Tag
     var showDialog by remember { mutableStateOf(false) }
     var inputSongTitle by remember { mutableStateOf("") }
     var inputArtist by remember { mutableStateOf("") }
 
-    // Launcher para pedir permisos de ubicación
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -48,7 +46,6 @@ fun MapScreen(viewModel: MapViewModel) {
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
 
-    // Efecto para pedir permisos nada más abrir la pantalla
     LaunchedEffect(Unit) {
         val fineLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
         if (fineLocation == PackageManager.PERMISSION_GRANTED) {
@@ -60,7 +57,7 @@ fun MapScreen(viewModel: MapViewModel) {
         }
     }
 
-    // Si tenemos permiso, obtenemos la ubicación real del dispositivo
+
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission) {
             try {
@@ -68,7 +65,6 @@ fun MapScreen(viewModel: MapViewModel) {
                     if (location != null) {
                         val userLatLng = LatLng(location.latitude, location.longitude)
                         currentLatLng = userLatLng
-                        // Movemos la cámara a la ubicación del usuario
                         cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
                     }
                 }
@@ -85,7 +81,6 @@ fun MapScreen(viewModel: MapViewModel) {
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission)
         ) {
-            // Dibujamos todos los marcadores (Music Tags) guardados
             musicTags.forEach { tag ->
                 Marker(
                     state = MarkerState(position = LatLng(tag.latitude, tag.longitude)),
@@ -95,7 +90,7 @@ fun MapScreen(viewModel: MapViewModel) {
             }
         }
 
-        // Botón flotante para guardar un "Music Tag" en la ubicación actual
+
         FloatingActionButton(
             onClick = {
                 if (currentLatLng != null) {
@@ -111,7 +106,6 @@ fun MapScreen(viewModel: MapViewModel) {
             Text("+ Tag")
         }
 
-        // Diálogo para introducir la canción que estás escuchando
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },

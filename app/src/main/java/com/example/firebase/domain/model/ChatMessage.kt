@@ -6,5 +6,5 @@ data class ChatMessage(
     val senderEmail: String = "",
     val message: String = "",
     val timestamp: Long = 0L,
-    val imageUrl: String? = null // Para cuando integremos la cámara más adelante
+    val imageUrl: String? = null
 )

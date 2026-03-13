@@ -8,11 +8,10 @@ import java.util.UUID
 
 class MapViewModel : ViewModel() {
 
-    // Lista de marcadores musicales guardados
+
     private val _musicTags = MutableStateFlow<List<MusicTag>>(emptyList())
     val musicTags: StateFlow<List<MusicTag>> = _musicTags
 
-    // Función para guardar una nueva canción en el mapa
     fun addMusicTag(songTitle: String, artist: String, lat: Double, lng: Double) {
         val newTag = MusicTag(
             id = UUID.randomUUID().toString(),
@@ -21,7 +20,6 @@ class MapViewModel : ViewModel() {
             latitude = lat,
             longitude = lng
         )
-        // Añadimos el nuevo tag manteniendo los anteriores
         _musicTags.value = _musicTags.value + newTag
     }
 }

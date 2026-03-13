@@ -31,7 +31,6 @@ class MainActivity : ComponentActivity() {
 
         auth = Firebase.auth
 
-        // Inicializamos Room y le pasamos el DAO al ViewModel
         val database = com.example.firebase.data.local.AppDatabase.getDatabase(this)
         homeViewmodel = HomeViewmodel(database.songDao())
 
@@ -49,7 +48,6 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         val currentUser: FirebaseUser? = auth.currentUser
         if(currentUser != null){
-            //Navegar a la home
         }
     }
 }

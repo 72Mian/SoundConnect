@@ -57,7 +57,7 @@ fun LoginScreen(auth: FirebaseAuth, navigateToHome: () -> Unit) {
                             .addOnCompleteListener { task ->
                                 isLoading = false
                                 if (task.isSuccessful) {
-                                    navigateToHome() // Navegamos a la home
+                                    navigateToHome()
                                 } else {
                                     Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                                 }

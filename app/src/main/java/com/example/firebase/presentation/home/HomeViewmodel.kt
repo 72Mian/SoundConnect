@@ -18,7 +18,6 @@ import com.example.firebase.data.model.Player
 
 class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
 
-    // --- ESTADO DE ARTISTAS ---
     private val _artist = MutableStateFlow<List<Artist>>(
         listOf(
             Artist("The Beatles", "Legendary Rock Band", "https://example.com/beatles.jpg"),
@@ -28,21 +27,14 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
     )
     val artist: StateFlow<List<Artist>> = _artist
 
-    // --- ESTADO DEL REPRODUCTOR ---
     private val _player = MutableStateFlow<Player?>(null)
     val player: StateFlow<Player?> = _player
 
-    // --- AQUÍ ESTÁ EL MEDIAPLAYER QUE SE TE HABÍA BORRADO ---
     private var mediaPlayer: MediaPlayer? = null
 
-    // Función para reproducir canciones reales de la API
     fun selectSongToPlay(song: Song) {
         _player.value = Player(song = song, play = true)
         playSong(song.previewUrl)
-    }
-
-    fun addPlayer(artist: Artist) {
-        _player.value = Player(song = null, play = true)
     }
 
     fun onPlaySelected() {
@@ -61,7 +53,6 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         stopSong()
     }
 
-    // --- LAS DOS FUNCIONES QUE TE DABAN ERROR ---
     fun playSong(previewUrl: String?) {
         if (previewUrl == null) return
 
@@ -87,14 +78,12 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         mediaPlayer?.release()
     }
 
-    // --- ESTADO DE LA API (Búsqueda) ---
+
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
 
-    // --- ESTADO DE ROOM (Favoritos) ---
     val favoriteSongs: StateFlow<List<Song>> = songDao.getAllFavorites()
         .map { entities ->
             entities.map {
@@ -102,7 +91,6 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
             }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // Función para buscar en la API
     fun searchMusic(query: String) {
         if (query.isBlank()) return
         viewModelScope.launch {
@@ -127,7 +115,6 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         }
     }
 
-    // Funciones para Favoritos
     fun toggleFavorite(song: Song, isFavorite: Boolean) {
         viewModelScope.launch {
             val entity = SongEntity(song.id, song.title, song.artist, song.coverUrl, song.previewUrl)
