@@ -1,3 +1,8 @@
 package com.example.firebase.data.model
 
-data class Player(val artist: Artist?=null, val play: Boolean?=null)
+import com.example.firebase.domain.model.Song
+
+data class Player(
+    val song: Song? = null,
+    val play: Boolean = false
+)

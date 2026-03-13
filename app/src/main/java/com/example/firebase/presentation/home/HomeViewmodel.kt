@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.firebase.data.api.RetrofitInstance
 import com.example.firebase.data.local.SongDao
 import com.example.firebase.data.local.SongEntity
-import com.example.firebase.data.model.Artist
-import com.example.firebase.data.model.Player
 import com.example.firebase.domain.model.Song
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.firebase.data.model.Artist
+import com.example.firebase.data.model.Player
 
 class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
 
@@ -28,24 +28,27 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
     )
     val artist: StateFlow<List<Artist>> = _artist
 
-    // --- ESTADO DEL REPRODUCTOR (UI) ---
+    // --- ESTADO DEL REPRODUCTOR ---
     private val _player = MutableStateFlow<Player?>(null)
     val player: StateFlow<Player?> = _player
 
-    // --- MEDIA PLAYER (Nativo para audio) ---
+    // --- AQUÍ ESTÁ EL MEDIAPLAYER QUE SE TE HABÍA BORRADO ---
     private var mediaPlayer: MediaPlayer? = null
 
+    // Función para reproducir canciones reales de la API
+    fun selectSongToPlay(song: Song) {
+        _player.value = Player(song = song, play = true)
+        playSong(song.previewUrl)
+    }
+
     fun addPlayer(artist: Artist) {
-        _player.value = Player(artist, true)
-        // Opcional: Si tus artistas tuvieran una URL de audio, llamarías a playSong(url) aquí
+        _player.value = Player(song = null, play = true)
     }
 
     fun onPlaySelected() {
         val isPlaying = _player.value?.play ?: false
-        // Cambiamos el estado visual de la UI (Play/Pause)
         _player.value = _player.value?.copy(play = !isPlaying)
 
-        // Pausamos o reanudamos la música real
         if (isPlaying) {
             mediaPlayer?.pause()
         } else {
@@ -58,7 +61,7 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         stopSong()
     }
 
-    // Función para reproducir el audio real desde una URL de la API
+    // --- LAS DOS FUNCIONES QUE TE DABAN ERROR ---
     fun playSong(previewUrl: String?) {
         if (previewUrl == null) return
 
@@ -79,7 +82,6 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         mediaPlayer = null
     }
 
-    // Limpiamos la memoria si se destruye el ViewModel
     override fun onCleared() {
         super.onCleared()
         mediaPlayer?.release()
@@ -137,7 +139,6 @@ class HomeViewmodel(private val songDao: SongDao) : ViewModel() {
         }
     }
 
-    // --- SENSORES: Recomendación ---
     private val recommendationKeywords = listOf(
         "Rock", "Pop", "Jazz", "The Beatles", "Dua Lipa", "Mozart", "Coldplay", "Rosalía"
     )

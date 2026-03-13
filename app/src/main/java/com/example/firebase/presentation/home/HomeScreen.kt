@@ -8,25 +8,15 @@ import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,8 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.firebase.data.model.Artist
 import com.example.firebase.data.model.Player
+import com.example.firebase.domain.model.Song
 import com.example.firebase.ui.theme.Black
 import kotlin.math.sqrt
 
@@ -50,58 +40,64 @@ fun HomeScreen(
     onNavigateToMap: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val artists: State<List<Artist>> = viewmodel.artist.collectAsState()
-    val player: Player? by viewmodel.player.collectAsState()
+    val songs by viewmodel.songs.collectAsState() // Obtenemos las canciones reales de la API
+    val player by viewmodel.player.collectAsState()
+    var searchQuery by remember { mutableStateOf("") } // Estado para la barra de búsqueda
 
-    // --- ACTIVAMOS EL SENSOR DE AGITAR ---
-    // ¡Ojo! Llamamos a ShakeDetector directamente, sin el viewmodel.
     ShakeDetector(
         onShake = {
             Toast.makeText(context, "¡Agitado! Buscando recomendaciones...", Toast.LENGTH_SHORT).show()
             viewmodel.recommendRandomSong()
         }
     )
-    // -------------------------------------
 
     Column(
         Modifier
             .fillMaxSize()
             .background(Black)
     ) {
-        // --- AQUÍ AÑADIMOS LOS BOTONES DE NAVEGACIÓN ---
+        // --- BOTONES DE NAVEGACIÓN ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = onNavigateToChat) {
-                Text("Chat")
-            }
-            Button(onClick = onNavigateToMap) {
-                Text("Mapa")
-            }
-            Button(onClick = onNavigateToProfile) {
-                Text("Perfil")
-            }
+            Button(onClick = onNavigateToChat) { Text("Chat") }
+            Button(onClick = onNavigateToMap) { Text("Mapa") }
+            Button(onClick = onNavigateToProfile) { Text("Perfil") }
         }
-        // -----------------------------------------------
 
-        Text(
-            "Popular artist",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 30.sp,
-            modifier = Modifier.padding(16.dp)
-        )
-        LazyRow {
-            items(artists.value) { artist ->
-                ArtistItem(artist = artist) { viewmodel.addPlayer(artist) }
+        // --- BARRA DE BÚSQUEDA ---
+        Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.weight(1f),
+                label = { Text("Buscar canción...", color = Color.Gray) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = { viewmodel.searchMusic(searchQuery) }) {
+                Text("Buscar")
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        // --- LISTA DE CANCIONES (API) ---
+        LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+            items(songs) { song ->
+                SongItem(song = song) {
+                    viewmodel.selectSongToPlay(song) // ¡Pulsar reproduce la canción!
+                }
+            }
+        }
+
+        // --- REPRODUCTOR ---
         player?.let {
             PlayerComponent(it, { viewmodel.onPlaySelected() }, { viewmodel.onCancelSelected() })
         }
@@ -109,27 +105,36 @@ fun HomeScreen(
 }
 
 @Composable
-fun ArtistItem(artist: Artist, onClick: () -> Unit) {
-    Column(
+fun SongItem(song: Song, onClick: () -> Unit) {
+    Row(
         modifier = Modifier
-            .padding(8.dp)
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
             .clickable { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = artist.image,
+            model = song.coverUrl,
             contentDescription = null,
             modifier = Modifier
-                .size(100.dp)
+                .size(60.dp)
                 .clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Text(
-            text = artist.name ?: "Unknown",
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 8.dp)
-        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                text = song.title,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Text(
+                text = song.artist,
+                color = Color.LightGray,
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
@@ -143,9 +148,9 @@ fun PlayerComponent(player: Player, onPlayPause: () -> Unit, onCancel: () -> Uni
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             AsyncImage(
-                model = player.artist?.image,
+                model = player.song?.coverUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .size(50.dp)
@@ -155,30 +160,37 @@ fun PlayerComponent(player: Player, onPlayPause: () -> Unit, onCancel: () -> Uni
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = player.artist?.name ?: "Unknown",
+                    text = player.song?.title ?: "Unknown",
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
                 Text(
-                    text = if (player.play == true) "Playing" else "Paused",
+                    text = if (player.play) "Reproduciendo..." else "Pausado",
                     color = Color.LightGray,
                     fontSize = 12.sp
                 )
             }
         }
         Row {
-            Button(onClick = onPlayPause) {
-                Text(if (player.play == true) "Pause" else "Play")
+            IconButton(onClick = onPlayPause) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow, // Usamos icono de Play de Compose
+                    contentDescription = "Play/Pause",
+                    tint = if (player.play) Color.Green else Color.White
+                )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onCancel) {
-                Text("X")
+            IconButton(onClick = onCancel) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Cerrar",
+                    tint = Color.Red
+                )
             }
         }
     }
 }
 
-// --- ESTA ES LA FUNCIÓN DEL SENSOR DE AGITACIÓN QUE DEBE ESTAR AL FINAL DEL ARCHIVO ---
 @Composable
 fun ShakeDetector(onShake: () -> Unit) {
     val context = LocalContext.current
@@ -211,7 +223,6 @@ fun ShakeDetector(onShake: () -> Unit) {
                     }
                 }
             }
-
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
